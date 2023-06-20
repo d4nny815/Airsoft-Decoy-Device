@@ -1,16 +1,12 @@
 #include "SevenSegmentDisplay.h"
 
 SevenSegmentDisplay::SevenSegmentDisplay(int anodes[], int segments[]){
-    segLUT[0] = 0x7E;
-    segLUT[1] = 0x30;
-    segLUT[2] = 0x6D;
-    segLUT[3] = 0x79;
-    segLUT[4] = 0x33;
-    segLUT[5] = 0x5B;
-    segLUT[6] = 0x5F;
-    segLUT[7] = 0x70;
-    segLUT[8] = 0x7F;
-    segLUT[9] = 0x7B;
+    int segLUTvals[] = {0x7E, 0x30, 0x6D, 0x79, 0x33, 0x5B, 0x5F, 0x70, 0x7F, 0x7B};
+    byte bcdLUTvals[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
+    for (int i=0; i<10; i++){
+        segLUT[i] = segLUTvals[i];
+        bcdLUT[i] = bcdLUTvals[i];
+    }
 
     // Assign the anodes and segments arrays
     this->anodes = anodes;
@@ -18,88 +14,115 @@ SevenSegmentDisplay::SevenSegmentDisplay(int anodes[], int segments[]){
 }
 
 void SevenSegmentDisplay::SsegSetup(){
-    for(int i = 0; i < 4; i++){
+    for(int i=0; i<4; i++){ 
         pinMode(anodes[i], OUTPUT);
-        digitalWrite(anodes[i], HIGH);
+        digitalWrite(anodes[i], HIGH); 
     }
-    for(int i = 0; i < 8; i++){
+    for(int i=0; i<8; i++){ 
         pinMode(segments[i], OUTPUT);
     }
+
+    // Test the display
+    for (int i=0; i<4; i++){
+		turnOnAnode(i);
+		for (int j=0; j<10; j++){
+			debugDigit(j);
+			delay(25);
+		}
+	}
+    clearDisplay();
+}
+
+void SevenSegmentDisplay::debugDigit(byte val){ // val between 0 and 9
+    displayDigit(segLUT[val]);
 }
 
 void SevenSegmentDisplay::displayDigit(byte hexVal) {
-  int curBit = 7;
   for (int i = 0; i <= 7; i++) {
-    byte seg = bitRead(hexVal, curBit);
-    curBit--;
+    byte seg = bitRead(hexVal, 7 - i);
     digitalWrite(segments[i], seg);
   }
 }
 
-void SevenSegmentDisplay::displaySseg(int val) {
-    int bcd = decToBCD(val);
-    switch(curDisplayVal){
-        case 0:
-            displayThousands(bcd >> 12);
-            curDisplayVal++;
-            break;
-        case 1:
-            displayHundreds((bcd >> 8) & 0x0F);
-            curDisplayVal++;
-            break;
-        case 2:
-            displayTens((bcd >> 4) & 0x0F);
-            curDisplayVal++;
-            break;
-        case 3:
-            displayOnes(bcd & 0x0F);
-            curDisplayVal = 0;
-            break;
+void SevenSegmentDisplay::clearDisplay() {
+  for (int i = 0; i <= 4; i++) {
+    digitalWrite(anodes[i], HIGH);
+  }
+}
+
+void SevenSegmentDisplay::turnOnAnode(byte anode) {  // anode from 0 to 3
+    for (int i=0; i<4; i++){
+        digitalWrite(anodes[i], (i == anode) ? LOW : HIGH);
     }
 }
 
-int SevenSegmentDisplay::decToBCD(int val) {
-  int bcd = 0;
-  int curBit = 0;
-  while (val > 0) {
-    int rem = val % 10;
-    bcd = bcd + (rem << curBit);
-    val = val / 10;
-    curBit += 4;
-  }
-  return bcd;
+void SevenSegmentDisplay::displaySseg(int val) {
+    unsigned int bcd = decToBCD(val);
+    switch(curDisplayVal){
+        case 0:
+            displayThousands(bcd);
+            curDisplayVal++;
+            return;
+        case 1:
+            displayHundreds(bcd);
+            curDisplayVal++;
+            return;
+        case 2:
+            displayTens(bcd);
+            curDisplayVal++;
+            return;
+        case 3:
+            displayOnes(bcd);
+            curDisplayVal = 0;
+    }
 }
 
-void SevenSegmentDisplay::displayThousands(byte val) {
-    // if (val == 0) { return; }
-    digitalWrite(anodes[0], LOW);   // turn on anode
-    displayDigit(segLUT[val]);      // display digit
-    delay(6);                       // delay to prevent flickering
-    digitalWrite(anodes[0], HIGH);  // turn off anode
+int SevenSegmentDisplay::decToBCD(unsigned int val) {
+    int bcd = 0;
+    int shift = 0;
+    do {
+        byte digit = val % 10;
+        bcd |= bcdLUT[digit] << shift;
+        val /= 10;
+        shift += 4;
+    } while (val != 0);
+    return bcd;
 }
 
-void SevenSegmentDisplay::displayHundreds(byte val) {
-    // if (val == 0) { return; }
-    digitalWrite(anodes[1], LOW);   // turn on anode
-    displayDigit(segLUT[val] | 0x80);      // display digit
-    delay(6);                       // delay to prevent flickering
-    digitalWrite(anodes[1], HIGH);  // turn off anode
+void SevenSegmentDisplay::displayThousands(unsigned int val) {
+    byte thousands = val >> 12;
+    if (thousands != 0){
+        displayDigit(segLUT[thousands]);
+        turnOnAnode(0);
+    }
+    return;
 }
 
-void SevenSegmentDisplay::displayTens(byte val) {
-    // if (val == 0) { return; }
-    digitalWrite(anodes[2], LOW);   // turn on anode
-    displayDigit(segLUT[val]);      // display digit
-    delay(6);                       // delay to prevent flickering
-    digitalWrite(anodes[2], HIGH);  // turn off anode
+void SevenSegmentDisplay::displayHundreds(unsigned int val) {
+    byte hundreds = (val >> 8) & 0x000F;
+    if (val > 0x1000 || hundreds != 0){
+        displayDigit(segLUT[hundreds]);
+        turnOnAnode(1);
+    }
+    return;
 }
 
-void SevenSegmentDisplay::displayOnes(byte val) {
-    digitalWrite(anodes[3], LOW);   // turn on anode
-    displayDigit(segLUT[val]);      // display digit
-    delay(6);                       // delay to prevent flickering
-    digitalWrite(anodes[3], HIGH);  // turn off anode
+void SevenSegmentDisplay::displayTens(unsigned int val) {
+    byte tens = (val >> 4) & 0x000F;
+    if (val > 0x0010 || tens != 0){
+        displayDigit(segLUT[tens]);
+        turnOnAnode(2);
+    }
+    return;
 }
+
+void SevenSegmentDisplay::displayOnes(unsigned int val) {
+    byte ones = val & 0x000F;
+    displayDigit(segLUT[ones]);
+    turnOnAnode(3);
+    return;
+}
+
 
 
 
