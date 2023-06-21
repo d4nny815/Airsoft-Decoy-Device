@@ -11,21 +11,9 @@ Password::Password(char passcode[]){
     this->pass_input[2] = 'A';
     this->pass_input[3] = 'A';
     this->pass_input[4] = 'A';
+    this->pass_input[5] = '\0';
     return;
 }
-
-// char* Password::getInputPass(){
-    // char ret_arr[4];
-    // for (int i = 0; i < 5; i++){
-        // if (pass_input[i] == 'A'){
-            // ret_arr[i] = ' ';
-        // }
-        // else{
-            // ret_arr[i] = pass_input[i];
-        // }
-    // }
-    // return ret_arr;
-// }
 
 char* Password::getInputPass(){
     return pass_input;

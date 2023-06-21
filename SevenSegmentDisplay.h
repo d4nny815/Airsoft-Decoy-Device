@@ -11,16 +11,16 @@ class SevenSegmentDisplay{
         int* anodes;
         int* segments;
         byte curDisplayVal = 0;
+        unsigned int decToBCD(unsigned int val);
         void debugDigit(byte val); 
-        int decToBCD(unsigned int val);
         void displayDigit(byte hexVal);
+        void turnOnAnode(byte anode);
         void clearDisplay();
         void displayThousands(unsigned int val);
         void displayHundreds(unsigned int val);
         void displayTens(unsigned int val);
         void displayOnes(unsigned int val);
     public:
-        void turnOnAnode(byte anode);
         SevenSegmentDisplay(int anodes[], int segments[]);  // constructor
         void SsegSetup();
         void displaySseg(int val);

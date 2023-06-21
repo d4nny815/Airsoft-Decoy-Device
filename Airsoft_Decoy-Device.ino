@@ -1,7 +1,8 @@
 // debugger code
 #include <Streaming.h>
+
 // init for system
-int systemState = 0;
+int systemState;
 #include "LED.h"
 LED red(39);
 LED yellow(40);
@@ -10,12 +11,13 @@ LED blue(41);
 Buzzer buzzer(38);
 
 // multitask setup
-unsigned long currentTime = 0;     //variable for millis()
-unsigned long milliMultiplex = 0;  // placeholder
-unsigned long milliSecond = 0;     // placeholder
-unsigned long milliBuzzer = 0;     // placeholder
-unsigned long multiplexDelay = 5;  //multiplex delay in ms
-unsigned long secondDelay = 1000;  //1Hz
+unsigned long currentTime = 0;
+unsigned long milliMultiplex = 0;  
+unsigned long milliSecond = 0;     
+unsigned long milliBuzzer = 0;     
+unsigned long multiplexDelay = 3;  //multiplex delay in ms
+unsigned long secondDelay = 1000;
+unsigned long buzzerDelay = 150;
 
 //init for keypad
 #include <Keypad.h>
@@ -37,6 +39,10 @@ int anodes[] = { 53, 52, 51, 50 };
 int segments[] = { 49, 47, 45, 43, 48, 46, 44, 42 };
 SevenSegmentDisplay sseg(anodes, segments);
 
+//init for LCD
+#include "lcd.h"
+
+
 //init for time
 #include "Time.h"
 Time timer(0, 0);
@@ -49,8 +55,10 @@ Password password("69420");
 void setup() {
 	Serial.begin(9600);
 	Serial << "Starting up..." << endl;
-	systemInit();
-
+	
+	systemState = 0;
+	sseg.SsegSetup();
+	lcd_init();
 }
 
 void loop() {
@@ -61,120 +69,126 @@ void loop() {
 	}
 	switch (systemState) {   
 		case (0):
+			systemState = enterTimeInit();
+			break;
+		case(1):
 			systemState = enterTime();
 			break;
-		case (1):
+		case (2):
 			systemState = countdown();
 			break;
-		case (2):
+		case (3):
 			systemState = endGameWin();
 			break;
-		case (3):
+		case (4):
 			systemState = endGameLose();
 			break;
-		default: systemState = systemInit();
+		case(5):
+			systemState = waitForReset();
+			break;
+		default: Serial << "Error: Invalid system state" << endl;
 	}
 }
 
 
-int enterTime() {
-	blue.turnON();
+int enterTimeInit(){ // state 0
+	lcd_print("Enter time:MM:SS", "");
+	buzzer.turnOFF();
+	return 1;
+}
+
+int enterTime() { // state 1
 	char customKey = customKeypad.getKey();
 	if (customKey) {
 		switch (customKey) {
-			case ('#'):  // entered time
-				if (timer.setTime()) {
-					Serial << "Time set to " << timer.getTimeArr() << endl;
-					timer.clearTime();
-					return 1;  // next state
+			case ('#'): // enter time
+				if (timer.setTime()) {	
+					String my_str = "Time set: " + String(timer.getTimeArr()); // if it works it works
+					lcd_print(my_str.c_str(), "");
+					timer.clearTimeArr();
+					return 2;  // next state
 				}
-				// Serial << "Invalid time entered" << endl;
-				// TODO: Display to LCD "Invalid time to enter"
+				lcd_print("Invalid time");
+				timer.clearTimeArr();
+				delay(500);
+				enterTimeInit();
 				break;
 			case ('*'):  // cleared time
-				timer.clearTime();
-				// Serial << "Time cleared" << endl;
-				return 0;
-			default:
+				timer.clearTimeArr();
+				enterTimeInit();
+				return 1;
+			default: // input time
 				timer.inputTime(customKey);
-				// TODO: Display time to LCD
-				Serial << "Time: " << timer.getTimeArr() << endl;
+				lcd_print(customKey);
 		}
 	}
-	return 0;
+	return 1;  // remain in same state
 }
 
-int countdown() {
-	yellow.turnON();
+
+
+int countdown() { // state 2
 	unsigned long currentTime = millis();
-	if (currentTime - milliBuzzer >= 125) {
+	if (currentTime - milliBuzzer >= buzzerDelay) {
 		milliBuzzer = currentTime;
 		buzzer.toggle();
 	}
 	if (currentTime - milliSecond >= secondDelay) {
 		milliSecond = currentTime;
 		if (timer.decrementTime()) {
-			Serial << "Time's up!" << endl;
-			// TODO: Display to LCD "Time's up!"
+			lcd_print("Time's up!", "");
+			delay(1000);
 			buzzer.turnOFF();
-			return 3;  // next state
+			return 4;  // next state
 		}
 	}
+	
 	char customKey = customKeypad.getKey();
 	if (customKey) {
 		switch (customKey) {
-			case ('#'):  // back to enter time
+			case ('#'): 
 				if (password.checkPass()) {
-					Serial << "Password correct" << endl;
-					// TODO: Display to LCD "Password correct"
+					lcd_print("Correct", "Password");
 					buzzer.turnOFF();
-					return 2;  // next state
+					delay(500);
+					return 3;  // next state
 				}
-				Serial << "incorrect password " << endl;
+				lcd_print("Incorrect", "Password");
+				delay(500);
+				password.clearPass();
+				lcd_print("Password:", "");
 				break;
 			case ('*'):  // back to enter passcode
 				password.clearPass();
-				// Serial << "Password cleared" << endl;
-				// TODO: Display to LCD "Password cleared"
+				lcd_print("Password:", "");
 				break;
 			default:
 				password.inputKey(customKey);
-				Serial << "Password: " << password.getInputPass() << endl;
-				// TODO: Display inputted password to LCD
+				lcd.print(customKey);
 		}
 	}
-	return 1;  // same state
+	return 2;  // same state
 }
 
-int endGameWin() {
-	red.turnON();
-	Serial << "Game won!" << endl;
-	// TODO: Display to LCD "Game won!"
-	char customKey = customKeypad.getKey();
-	if (customKey) {
-		return 0;
-	}
-	return 2;
+
+int endGameWin() { // state 3
+	lcd_print("Game won!", "Press any key");
+	return 5;
 }
 
-int endGameLose() {
-	red.turnON();
+int endGameLose() { // state 4
 	buzzer.LowPitch();
-	Serial << "Game Lost!" << endl;
-	// TODO: Display to LCD "Game Lost!"
+	lcd_print("Game Lost!", "Press any key");
+	return 5;
+}
+
+int waitForReset(){ // state 5
 	char customKey = customKeypad.getKey();
 	if (customKey) {
+		timer.clearTime();
 		return 0;
 	}
-	return 3;
+	return 5;
 }
 
-int systemInit() {
-	sseg.SsegSetup();
 
-	red.turnOFF();
-	yellow.turnOFF();
-	blue.turnOFF();
-	buzzer.turnOFF();
-	return 0;
-}

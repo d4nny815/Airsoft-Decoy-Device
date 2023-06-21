@@ -77,7 +77,7 @@ void SevenSegmentDisplay::displaySseg(int val) {
     }
 }
 
-int SevenSegmentDisplay::decToBCD(unsigned int val) {
+unsigned int SevenSegmentDisplay::decToBCD(unsigned int val) {
     int bcd = 0;
     int shift = 0;
     do {

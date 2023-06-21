@@ -6,7 +6,7 @@
 class Password{
     private:
         char passcode[5];
-        char pass_input[5];
+        char pass_input[6];
         int cursor = 0;
     public:
         Password(char passcode[]);
