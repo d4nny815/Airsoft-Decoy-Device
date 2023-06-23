@@ -8,7 +8,7 @@ LED red(39);
 LED yellow(40);
 LED blue(41);
 #include "Buzzer.h"
-Buzzer buzzer(38);
+Buzzer buzzer(13);
 
 // multitask setup
 unsigned long currentTime = 0;
@@ -25,17 +25,17 @@ const byte ROWS = 4;
 const byte COLS = 4;
 char hexaKeys[ROWS][COLS] = {
 	{ '1', '2', '3', ':' },
-	{ '4', '5', '6', 'B' },
-	{ '7', '8', '9', 'C' },
-	{ '*', '0', '#', 'D' }
+	{ '4', '5', '6', ':' },
+	{ '7', '8', '9', ':' },
+	{ '*', '0', '#', '#' }
 };
 byte rowPins[ROWS] = { 23, 25, 27, 29 };
-byte colPins[COLS] = { 31, 33, 35, 37 };
+byte colPins[COLS] = { 31, 33, 12, 37 };
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 //init for 7seg digplay
 #include "SevenSegmentDisplay.h"
-int anodes[] = { 53, 52, 51, 50 };
+int anodes[] = { 50, 51, 52, 53 };
 int segments[] = { 49, 47, 45, 43, 48, 46, 44, 42 };
 SevenSegmentDisplay sseg(anodes, segments);
 
@@ -54,14 +54,22 @@ Password password("69420");
 
 void setup() {
 	Serial.begin(9600);
-	Serial << "Starting up..." << endl;
-	
 	systemState = 0;
-	sseg.SsegSetup();
 	lcd_init();
+  Serial << "Setup" << endl;
+	sseg.SsegSetup();
 }
 
 void loop() {
+	// while (true)
+	// {
+	// 	char customKey = customKeypad.getKey();
+	// 	if (customKey) {
+	// 		Serial << customKey << endl;
+	// 	}
+	// }
+	
+
 	unsigned long currentTime = millis();
 	if (currentTime - milliMultiplex >= multiplexDelay) {
 		milliMultiplex = currentTime;
@@ -72,12 +80,15 @@ void loop() {
 			systemState = enterTimeInit();
 			break;
 		case(1):
+			yellow.toggle();
 			systemState = enterTime();
 			break;
 		case (2):
+			red.toggle();
 			systemState = countdown();
 			break;
 		case (3):
+			blue.toggle();
 			systemState = endGameWin();
 			break;
 		case (4):
@@ -86,7 +97,7 @@ void loop() {
 		case(5):
 			systemState = waitForReset();
 			break;
-		default: Serial << "Error: Invalid system state" << endl;
+		default: setup();
 	}
 }
 
@@ -119,7 +130,8 @@ int enterTime() { // state 1
 				return 1;
 			default: // input time
 				timer.inputTime(customKey);
-				lcd_print(customKey);
+				Serial << timer.getTimeArr() << endl;
+				lcd_print(timer.getTimeArr());
 		}
 	}
 	return 1;  // remain in same state

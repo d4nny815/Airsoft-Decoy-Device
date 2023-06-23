@@ -8,7 +8,7 @@ Buzzer::Buzzer(int pin) {
 
 void Buzzer::HighPitch() {
     buzzerState = true;
-    tone(buzzerPin, 1800);
+    tone(buzzerPin, 2200);
 }
 
 void Buzzer::LowPitch() {
@@ -23,7 +23,7 @@ void Buzzer::turnOFF() {
 
 void Buzzer::toggle() {
   buzzerState = !buzzerState;
-  if (buzzerState == true){
+  if (buzzerState){
       HighPitch();
   }
   else{

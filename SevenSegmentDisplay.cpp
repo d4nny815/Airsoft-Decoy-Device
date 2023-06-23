@@ -16,10 +16,12 @@ SevenSegmentDisplay::SevenSegmentDisplay(int anodes[], int segments[]){
 void SevenSegmentDisplay::SsegSetup(){
     for(int i=0; i<4; i++){ 
         pinMode(anodes[i], OUTPUT);
-        digitalWrite(anodes[i], HIGH); 
+        digitalWrite(anodes[i], LOW); 
     }
     for(int i=0; i<8; i++){ 
         pinMode(segments[i], OUTPUT);
+        digitalWrite(segments[i], HIGH);
+        delay(25);
     }
 
     // Test the display

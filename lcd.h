@@ -12,7 +12,7 @@ void lcd_init(){
     lcd.backlight();
     lcd.setCursor(0,0);
     lcd.print("FAKE BOMB");
-    delay(125);
+    delay(2500);
     return;
 }
 

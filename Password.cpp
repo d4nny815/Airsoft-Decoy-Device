@@ -29,7 +29,13 @@ void Password::inputKey(char key){
 }
 
 bool Password::checkPass(){
-    for (int i = 0; i < 4; i++){
+    Serial.print(pass_input);
+    Serial.print("    ");
+    Serial.println(passcode);
+    for (int i=0; i<5; i++){
+        Serial.print(pass_input[i]);
+        Serial.print("    ");
+        Serial.println(passcode[i]);
         if (passcode[i] != pass_input[i]){
             clearPass();
             return false;
